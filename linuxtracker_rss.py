@@ -186,7 +186,7 @@ def main():
 
 	logger = logging.getLogger(logging_domain)
 	logger.setLevel(logging_config['level'])
-	formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+	formatter = logging.Formatter('%(asctime)s\t%(name)s\t%(levelname)s\t%(message)s')
 
 	if LINUXTRACKER_LOGGING_DIR is not None:
 		create_path_if_necessary(LINUXTRACKER_LOGGING_DIR)
