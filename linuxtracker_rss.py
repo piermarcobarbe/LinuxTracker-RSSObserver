@@ -134,7 +134,7 @@ def download_from_url(url, download_dir=None, filename=None, filename_url_param=
 	with get(url, verify=tls_verify) as response:
 		with open(filename, 'wb') as fp:
 			fp.write(response.content)
-			log(logging.DEBUG, "Saved file at {}".format(filename))
+			log(logging.INFO, "Saved file at {}".format(filename))
 
 	return filename
 
