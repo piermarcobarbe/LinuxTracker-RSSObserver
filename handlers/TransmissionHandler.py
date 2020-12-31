@@ -1,6 +1,5 @@
 from Handler import Handler
 from transmission_rpc import Client
-from os import environ as env
 from dotenv import load_dotenv
 from os import getenv
 from json import dumps
@@ -22,6 +21,7 @@ class TransmissionHandler(Handler):
 				username=self.username,
 				password=self.password
 			)
+			print("Connected to {}:{}".format(self.host, self.port))
 		except Exception as e:
 			print("Cannot connect to {}@{}:{}".format(self.username, self.host, self.port))
 			print(e)
@@ -29,11 +29,7 @@ class TransmissionHandler(Handler):
 
 	def handle(self, files):
 
-
-		print(str(self))
-
 		for f in files:
-			print(f)
 			self.add_torrent(f)
 
 	def as_dict(self):
@@ -42,12 +38,12 @@ class TransmissionHandler(Handler):
 		return data
 
 	def __str__(self):
-		print(self.__dict__)
 		return dumps(self.as_dict(), indent=4)
 
 	def add_torrent(self, torrent_path):
 		with open(torrent_path, 'rb') as fp:
 			try:
 				self.client.add_torrent(fp)
+				print("Added torrent file {}".format(torrent_path))
 			except:
 				print("Cannot add {}".format(torrent_path))
