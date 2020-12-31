@@ -9,7 +9,6 @@ import urllib3
 from os import makedirs, getenv
 from dotenv import load_dotenv
 import logging
-import sys
 
 from handlers.TransmissionHandler import TransmissionHandler
 
@@ -123,6 +122,7 @@ def download_from_url(url, download_dir=None, filename=None, filename_url_param=
 	parsed = urlparse.urlparse(url)
 	if filename is None:
 		filename = parse_qs(parsed.query)[filename_url_param][0]
+		filename = str(filename)
 
 	if filename is None:
 		raise Exception("download_from_url: No filename specified")
@@ -160,6 +160,14 @@ def download_torrents_from_url(url_list, torrent_download_path=None, tls_verify=
 	return created_files
 
 
+def my_import(name):
+	components = name.split('.')
+	mod = __import__(components[0])
+	for comp in components[1:]:
+		mod = getattr(mod, comp)
+	return mod
+
+
 def main():
 	load_dotenv()
 
@@ -170,6 +178,8 @@ def main():
 	DISABLE_REQUESTS_WARNING = getenv("DISABLE_REQUESTS_WARNING") is not None
 	NO_TLS_VERIFICATION = getenv("NO_TLS_VERIFICATION") is not None  # if variable is set, it will be set to True
 	LINUXTRACKER_LOGGING_LEVEL = getenv("LINUXTRACKER_LOGGING_LEVEL") or "ERROR"
+	LINUXTRACKER_HANDLER_FILE = getenv("LINUXTRACKER_HANDLER_FILE")
+	LINUXTRACKER_HANDLER_CLASS = getenv("LINUXTRACKER_HANDLER_CLASS")
 
 	if LINUXTRACKER_LOGGING_LEVEL in list(_nameToLevel.keys()):
 		LINUXTRACKER_LOGGING_LEVEL = _nameToLevel[LINUXTRACKER_LOGGING_LEVEL]
@@ -215,8 +225,10 @@ def main():
 		"LOG_DIR": LINUXTRACKER_LOGGING_DIR,
 		'DISABLE_REQUESTS_WARNING': DISABLE_REQUESTS_WARNING,
 		"DISABLE_HTTP_TLS_VERIFICATION": NO_TLS_VERIFICATION,
-		"LOGGING_LEVEL": LINUXTRACKER_LOGGING_LEVEL
-	}))
+		"LOGGING_LEVEL": LINUXTRACKER_LOGGING_LEVEL,
+		"HANDLER_FILE": LINUXTRACKER_HANDLER_FILE,
+		"HANDLER_CLASS": LINUXTRACKER_HANDLER_CLASS
+	}, indent=4))
 
 	if DISABLE_REQUESTS_WARNING:
 		urllib3.disable_warnings()
@@ -228,16 +240,21 @@ def main():
 								tls_verify=NO_TLS_VERIFICATION,
 								rss_filename=session_filename + ".xml")
 
+	if LINUXTRACKER_HANDLER_FILE is None or LINUXTRACKER_HANDLER_CLASS is None:
+		log(logging.WARNING, "No handler file or class specified.")
+
 	XML_Tree = ET.parse(rss_filename)
 	torrents_urls = get_torrent_URLs_from_xml_tree(XML_Tree.getroot())
 	log(logging.INFO, "Found {} torrent URLs".format(len(torrents_urls)))
+
 	created_file_paths = download_torrents_from_url(torrents_urls,
 													torrent_download_path=LINUXTRACKER_TORRENT_DIRECTORY,
 													tls_verify=NO_TLS_VERIFICATION)
-	log(logging.DEBUG, created_file_paths)
 
+	log(logging.DEBUG, "Created files: " + ', '.join(created_file_paths))
 
-# TransmissionHandler().handle(created_file_paths)
+	C = my_import(LINUXTRACKER_HANDLER_FILE.replace("/", '.') + '.' + LINUXTRACKER_HANDLER_CLASS)
+	C().handle(created_file_paths)
 
 
 if __name__ == "__main__":
