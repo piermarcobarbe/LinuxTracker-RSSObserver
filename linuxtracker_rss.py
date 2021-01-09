@@ -160,14 +160,6 @@ def download_torrents_from_url(url_list, torrent_download_path=None, tls_verify=
 	return created_files
 
 
-def my_import(name):
-	components = name.split('.')
-	mod = __import__(components[0])
-	for comp in components[1:]:
-		mod = getattr(mod, comp)
-	return mod
-
-
 def main():
 	load_dotenv()
 
@@ -253,8 +245,8 @@ def main():
 
 	log(logging.DEBUG, "Created files: " + ', '.join(created_file_paths))
 
-	C = my_import(LINUXTRACKER_HANDLER_FILE.replace("/", '.') + '.' + LINUXTRACKER_HANDLER_CLASS)
-	C().handle(created_file_paths)
+	handler = TransmissionHandler()
+	handler.handle(created_file_paths)
 
 
 if __name__ == "__main__":
