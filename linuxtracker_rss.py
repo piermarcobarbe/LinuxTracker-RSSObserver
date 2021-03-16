@@ -239,7 +239,7 @@ def main():
 	if LINUXTRACKER_HANDLER_FILE is None or LINUXTRACKER_HANDLER_CLASS is None:
 		log(logging.WARNING, "No handler file or class specified.")
 
-	created_file_paths = None
+	created_file_paths = []
 
 	if not LINUXTRACKER_DRY_RUN:
 		XML_Tree = ET.parse(rss_filename)
@@ -257,7 +257,7 @@ def main():
 
 	Module = import_module(LINUXTRACKER_HANDLER_FILE)
 	Handler = getattr(Module, LINUXTRACKER_HANDLER_CLASS)
-	print(Handler)
+	# print(Handler)
 
 	handler = Handler()
 	handler.handle(created_file_paths, LINUXTRACKER_DRY_RUN)
