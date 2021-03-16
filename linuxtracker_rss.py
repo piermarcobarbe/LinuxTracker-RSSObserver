@@ -8,9 +8,8 @@ from os.path import isdir, join
 import urllib3
 from os import makedirs, getenv
 from dotenv import load_dotenv
+from importlib import import_module
 import logging
-
-from handlers.TransmissionHandler import TransmissionHandler
 
 logging_domain = "linuxtracker_RSS"
 
@@ -31,14 +30,15 @@ def log(level, message):
 	logger.log(level=level, msg=message)
 
 
-def create_path_if_necessary(path):
+def create_path_if_necessary(path, dry_run=False):
 	log(logging.DEBUG, "create_path_if_necessary({})".format(path))
 	if path is None:
 		log(logging.DEBUG, "Not creating path since it equals None.")
 		return False
 	if not isdir(path):
 		log(logging.DEBUG, "Creating new path {}.".format(path))
-		makedirs(path)
+		if not dry_run:
+			makedirs(path)
 		log(logging.INFO, "Created path {}.".format(path))
 		return True
 	log(logging.DEBUG, "Path {} already exists.".format(path))
@@ -53,7 +53,7 @@ def get_session_filename():
 	return date_str
 
 
-def get_rss_content(alternative_url=None, tls_verify=True):
+def get_rss_content(alternative_url=None, tls_verify=True, dry_run=False):
 	log(logging.DEBUG, "get_rss_content(alternative_url={}, tls_verify={})".format(alternative_url, tls_verify))
 
 	rss_url = "https://linuxtracker.org/rss_torrents.php?pid=86a37955da34b675cc7aa36d351e7794"
@@ -62,12 +62,13 @@ def get_rss_content(alternative_url=None, tls_verify=True):
 		rss_url = alternative_url
 
 	log(logging.INFO, "Using URL {} as RSS source".format(rss_url))
+	if not dry_run:
+		response = get(url=rss_url, verify=tls_verify)
+		return response.content
+	return "dry_run response".encode()
 
-	response = get(url=rss_url, verify=tls_verify)
-	return response.content
 
-
-def get_rss_file(alternative_url=None, xml_download_dir=None, rss_filename=None, tls_verify=True):
+def get_rss_file(alternative_url=None, xml_download_dir=None, rss_filename=None, tls_verify=True, dry_run=False):
 	log(logging.DEBUG, "get_rss_file(alternative_url={}, xml_download_dir={}, rss_filename={}, tls_verify={})".format(
 		alternative_url, xml_download_dir, rss_filename, tls_verify
 	))
@@ -75,19 +76,20 @@ def get_rss_file(alternative_url=None, xml_download_dir=None, rss_filename=None,
 		xml_download_dir = "./"
 	log(logging.DEBUG, "Using XML download directory './'")
 
-	rss_content = get_rss_content(alternative_url=alternative_url, tls_verify=tls_verify)
+	rss_content = get_rss_content(alternative_url=alternative_url, tls_verify=tls_verify, dry_run=dry_run)
 
 	if rss_filename is None:
 		rss_filename = get_session_filename() + ".xml"
 
-	create_path_if_necessary(xml_download_dir)
+	create_path_if_necessary(xml_download_dir, dry_run=dry_run)
 
 	rss_filename = join(xml_download_dir, rss_filename)
 
 	log(logging.INFO, "Saving RSS content into {}".format(rss_filename))
 
-	with open(rss_filename, 'wb') as fp:
-		fp.write(rss_content)
+	if not dry_run:
+		with open(rss_filename, 'wb') as fp:
+			fp.write(rss_content)
 
 	log(logging.INFO, "Saved RSS feed into {}".format(rss_filename))
 	return rss_filename
@@ -170,6 +172,7 @@ def main():
 	DISABLE_REQUESTS_WARNING = getenv("DISABLE_REQUESTS_WARNING") is not None
 	NO_TLS_VERIFICATION = getenv("NO_TLS_VERIFICATION") is not None  # if variable is set, it will be set to True
 	LINUXTRACKER_LOGGING_LEVEL = getenv("LINUXTRACKER_LOGGING_LEVEL") or "ERROR"
+	LINUXTRACKER_DRY_RUN = getenv("LINUXTRACKER_DRY_RUN_SET") is not None
 	LINUXTRACKER_HANDLER_FILE = getenv("LINUXTRACKER_HANDLER_FILE")
 	LINUXTRACKER_HANDLER_CLASS = getenv("LINUXTRACKER_HANDLER_CLASS")
 
@@ -230,23 +233,34 @@ def main():
 	rss_filename = get_rss_file(alternative_url=LINUXTRACKER_RSS_URL,
 								xml_download_dir=LINUXTRACKER_XML_DIRECTORY,
 								tls_verify=NO_TLS_VERIFICATION,
-								rss_filename=session_filename + ".xml")
+								rss_filename=session_filename + ".xml",
+								dry_run=LINUXTRACKER_DRY_RUN)
 
 	if LINUXTRACKER_HANDLER_FILE is None or LINUXTRACKER_HANDLER_CLASS is None:
 		log(logging.WARNING, "No handler file or class specified.")
 
-	XML_Tree = ET.parse(rss_filename)
-	torrents_urls = get_torrent_URLs_from_xml_tree(XML_Tree.getroot())
-	log(logging.INFO, "Found {} torrent URLs".format(len(torrents_urls)))
+	created_file_paths = None
 
-	created_file_paths = download_torrents_from_url(torrents_urls,
-													torrent_download_path=LINUXTRACKER_TORRENT_DIRECTORY,
-													tls_verify=NO_TLS_VERIFICATION)
+	if not LINUXTRACKER_DRY_RUN:
+		XML_Tree = ET.parse(rss_filename)
+		torrents_urls = get_torrent_URLs_from_xml_tree(XML_Tree.getroot())
+		log(logging.INFO, "Found {} torrent URLs".format(len(torrents_urls)))
 
-	log(logging.DEBUG, "Created files: " + ', '.join(created_file_paths))
+		created_file_paths = download_torrents_from_url(torrents_urls,
+														torrent_download_path=LINUXTRACKER_TORRENT_DIRECTORY,
+														tls_verify=NO_TLS_VERIFICATION)
 
-	handler = TransmissionHandler()
-	handler.handle(created_file_paths)
+		log(logging.DEBUG, "Created files: " + ', '.join(created_file_paths))
+
+	else:
+		log(logging.INFO, "No files created since dry run mode is activated.")
+
+	Module = import_module(LINUXTRACKER_HANDLER_FILE)
+	Handler = getattr(Module, LINUXTRACKER_HANDLER_CLASS)
+	print(Handler)
+
+	handler = Handler()
+	handler.handle(created_file_paths, LINUXTRACKER_DRY_RUN)
 
 
 if __name__ == "__main__":

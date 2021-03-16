@@ -9,6 +9,7 @@ from sys import exit
 class TransmissionHandler(Handler):
 
 	def __init__(self):
+		super().__init__()
 		load_dotenv(verbose=True)
 		self.host = getenv("TRANSMISSION_HOST") or "localhost"
 		self.port = getenv("TRANSMISSION_PORT") or 9091
@@ -27,10 +28,13 @@ class TransmissionHandler(Handler):
 			print(e)
 			exit(1)
 
-	def handle(self, files):
+	def handle(self, files, dry_run=False):
 
-		for f in files:
-			self.add_torrent(f)
+		if not dry_run:
+			for f in files:
+				self.add_torrent(f)
+		else:
+			print("Not adding files since dry run mode is activated.")
 
 	def as_dict(self):
 		data = self.__dict__.copy()

@@ -15,3 +15,6 @@ Future releases will handle choosing a handler at runtime with environment varia
 
 
 Logging levels are implemented and can be changed always from the `.env` file.
+
+The available logging levels are:
+'CRITICAL', 'FATAL', 'ERROR', 'WARN', 'WARNING', 'INFO', 'DEBUG', 'NOTSET'.
