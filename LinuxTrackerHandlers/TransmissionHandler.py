@@ -4,12 +4,14 @@ from dotenv import load_dotenv
 from os import getenv
 from json import dumps
 from sys import exit
+import logging
+
 
 
 class TransmissionHandler(Handler):
 
-	def __init__(self):
-		super().__init__()
+	def __init__(self, log_function):
+		super().__init__(log_function)
 		load_dotenv(verbose=True)
 		self.host = getenv("TRANSMISSION_HOST") or "localhost"
 		self.port = getenv("TRANSMISSION_PORT") or 9091
@@ -22,10 +24,10 @@ class TransmissionHandler(Handler):
 				username=self.username,
 				password=self.password
 			)
-			print("Connected to {}:{}".format(self.host, self.port))
+			self.log(logging.INFO, "Connected to {}:{}".format(self.host, self.port))
 		except Exception as e:
-			print("Cannot connect to {}@{}:{}".format(self.username, self.host, self.port))
-			print(e)
+			self.log(logging.ERROR, "Cannot connect to {}@{}:{}".format(self.username, self.host, self.port))
+			self.log(logging.ERROR, e)
 			exit(1)
 
 	def handle(self, files, dry_run=False):
@@ -34,7 +36,7 @@ class TransmissionHandler(Handler):
 			for f in files:
 				self.add_torrent(f)
 		else:
-			print("Not adding files since dry run mode is activated.")
+			self.log("Not adding files since dry run mode is activated.")
 
 	def as_dict(self):
 		data = self.__dict__.copy()
@@ -48,6 +50,6 @@ class TransmissionHandler(Handler):
 		with open(torrent_path, 'rb') as fp:
 			try:
 				self.client.add_torrent(fp)
-				print("Added torrent file {}".format(torrent_path))
+				self.log(logging.INFO, "Added torrent file {}".format(torrent_path))
 			except:
-				print("Cannot add {}".format(torrent_path))
+				self.log(logging.WARNING, "Cannot add {}".format(torrent_path))

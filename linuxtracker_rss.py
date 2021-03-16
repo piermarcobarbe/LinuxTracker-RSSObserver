@@ -259,7 +259,7 @@ def main():
 	Handler = getattr(Module, LINUXTRACKER_HANDLER_CLASS)
 	# print(Handler)
 
-	handler = Handler()
+	handler = Handler(log_function=log)
 	handler.handle(created_file_paths, LINUXTRACKER_DRY_RUN)
 
 
