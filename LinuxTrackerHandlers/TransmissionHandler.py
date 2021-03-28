@@ -36,7 +36,7 @@ class TransmissionHandler(Handler):
 			for f in files:
 				self.add_torrent(f)
 		else:
-			self.log("Not adding files since dry run mode is activated.")
+			self.log(logging.DEBUG, "Not adding files since dry run mode is activated.")
 
 	def as_dict(self):
 		data = self.__dict__.copy()

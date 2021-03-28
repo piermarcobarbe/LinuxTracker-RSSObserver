@@ -17,5 +17,8 @@ class VoidHandler(Handler):
 		self.log(INFO, "You can implement your own handler, the only thing you need is to override the 'handle' function.")
 		self.log(INFO, "In your handler, you will have as parameters the path of the files which have been generated, so it's")
 		self.log(INFO, "up to you what to do with such files.")
-		# TODO: Add message about using TransmissionHandler
+		self.log(INFO, "For example, you can start using the TransmissionHandler already provided in this repository.")
+		self.log(INFO, "For doing so, set in your .env file:")
+		self.log(INFO, "LINUXTRACKER_HANDLER_FILE=\"LinuxTrackerHandlers.VoidHandler\" and")
+		self.log(INFO, "LINUXTRACKER_HANDLER_CLASS=\"VoidHandler\"")
 
