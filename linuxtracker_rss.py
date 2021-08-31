@@ -83,7 +83,7 @@ def get_rss_file(alternative_url=None, xml_download_dir=None, rss_filename=None,
 
 	create_path_if_necessary(xml_download_dir, dry_run=dry_run)
 
-	rss_filename = join(xml_download_dir, rss_filename)
+	rss_filename = join(xml_download_dir, rss_filename).replace('/', '_')
 
 	log(logging.INFO, "Saving RSS content into {}".format(rss_filename))
 
