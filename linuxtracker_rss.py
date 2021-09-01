@@ -83,7 +83,7 @@ def get_rss_file(alternative_url=None, xml_download_dir=None, rss_filename=None,
 
 	create_path_if_necessary(xml_download_dir, dry_run=dry_run)
 
-	rss_filename = join(xml_download_dir, rss_filename).replace('/', '_')
+	rss_filename = join(xml_download_dir, rss_filename)
 
 	log(logging.INFO, "Saving RSS content into {}".format(rss_filename))
 
@@ -125,6 +125,8 @@ def download_from_url(url, download_dir=None, filename=None, filename_url_param=
 	if filename is None:
 		filename = parse_qs(parsed.query)[filename_url_param][0]
 		filename = str(filename)
+		filename = filename.replace('/', '_')
+		print(filename)
 
 	if filename is None:
 		raise Exception("download_from_url: No filename specified")
